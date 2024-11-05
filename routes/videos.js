@@ -1,10 +1,7 @@
-import express from "express"
-const app = express();
+import express from 'express';
+const router = express.Router();
 
-app.get('/', (req, res) => {
-    res.send('Welcome to API')
-});
-
-app.listen(8080, () => {
-    console.log('Listening on port 8080')
-});
+router.get("/videos", (req, res) => {
+    res.send("this is my router")
+})
+export default router;
