@@ -15,11 +15,14 @@ router.get("/", (req, res) => {
 
     try {
       const jsonData = JSON.parse(data);
-      res.json(jsonData);
+      if (jsonData) {
+        res.json(jsonData);
+      }
+
     } catch (err) {
-      console.error("Error parsing data to get all the video data:", err);
+      console.error("Error parsing or sending video data:", err);
       res.status(500).json({
-        error: "Error parsing data to get all the video data",
+        error: "Error parsing to get all the video data",
       });
     }
   });
@@ -27,10 +30,9 @@ router.get("/", (req, res) => {
 
 router.get("/:id", (req, res) => {
   const { id } = req.params;
-
   fs.readFile("data/videos.json", "utf8", (err, data) => {
     if (err) {
-      console.error("Error reading data from file:", err);
+      console.error("Error reading data from video file:", err);
       return res.status(500).json({
         error: "Error reading file to select video from",
       });
@@ -38,6 +40,11 @@ router.get("/:id", (req, res) => {
 
     try {
       const parsedData = JSON.parse(data);
+      if (!parsedData) {
+        return res.status(404).json({
+          error: "Parsing data for chosen video"
+        })
+      }
       const foundVideo = parsedData.find((video) => video.id === id);
 
       if (!foundVideo) {
@@ -59,6 +66,40 @@ router.get("/:id", (req, res) => {
   });
 });
 
+router.get("/:id/comments", (req, res) => {
+  const { id } = req.params;
+
+  fs.readFile("data/videos.json", "utf8", (err, data) => {
+    if (err) {
+      console.error("Error reading data from video file:", err);
+      return res.status(500).json({
+        error: "Error reading file to select video from",
+      });
+    }
+
+    try {
+      const parsedData = JSON.parse(data);
+      const foundVideo = parsedData.find((video) => video.id === id);
+
+      if (!foundVideo) {
+        return res.status(404).json({
+          error: "Video not found when searching for selected video",
+        });
+      }
+
+      res.json(foundVideo.comments);
+    } catch (err) {
+      console.error(
+        "Error parsing data to get selected video comments",
+        err
+      );
+      res.status(500).json({
+        error: "Error parsing data to get selected video comments",
+      });
+    }
+  });
+});
+
 router.post("/upload-video", (req, res) => {
   if (!req.body.title || !req.body.description) {
     return res.status(400).json({
@@ -69,7 +110,7 @@ router.post("/upload-video", (req, res) => {
   const newVideo = {
     id: uuidv4(),
     title: req.body.title,
-    channel: "Yours truleys",
+    channel: "Yours Truly",
     description: req.body.description,
     views: 0,
     likes: 0,
@@ -84,14 +125,20 @@ router.post("/upload-video", (req, res) => {
     if (err) {
       console.error("Error reading file", err);
       return res.status(500).json({
-        error: "error reading file for video post",
+        error: "Error reading file for video post",
       });
     }
 
     try {
       let parsedVideos = JSON.parse(data);
-      parsedVideos.push(newVideo);
-
+      if (parsedVideos) {
+        parsedVideos.push(newVideo);
+      } else {
+        return res.status(500).json({
+          error: "Error pushing new video to parsed videos."
+        })
+      }
+      
       fs.writeFile(
         "data/videos.json",
         JSON.stringify(parsedVideos, null, 2),
@@ -134,9 +181,6 @@ router.post("/comment/:id", (req, res) => {
     likes: 0,
     timestamp: Date.now(),
   };
-  
-  
-        
       
   fs.readFile("data/videos.json", "utf8", (err, data) => {
     if (err) {
